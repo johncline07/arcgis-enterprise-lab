@@ -1,0 +1,23 @@
+# Terraform working directory
+.terraform/
+
+# Terraform state
+*.tfstate
+*.tfstate.*
+
+# Local variable files
+terraform.tfvars
+*.auto.tfvars
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Private keys
+*.pem
+arcgis-jumpbox
+arcgis-internal
+
+# Editor / workspace
+*.code-workspace
+.vscode/

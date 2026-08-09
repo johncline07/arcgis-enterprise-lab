@@ -1,0 +1,68 @@
+    - name: Ensure jumpbox security packages are installed
+      ansible.builtin.apt:
+        name:
+          - ufw
+          - fail2ban
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Deploy SSH hardening drop-in file
+      ansible.builtin.template:
+        src: 99-hardening.conf.j2
+        dest: /etc/ssh/sshd_config.d/99-hardening.conf
+        owner: root
+        group: root
+        mode: "0644"
+      register: ssh_hardening
+      notify: reload ssh
+
+    - name: Validate SSH configuration
+      ansible.builtin.command: /usr/sbin/sshd -t
+      changed_when: false
+      when: ssh_hardening.changed
+      
+
+    - name: Allow SSH from admin IP
+      community.general.ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+        from_ip: "{{ admin_ip }}"
+
+    - name: Set UFW default incoming policy
+      community.general.ufw:
+        policy: deny
+        direction: incoming
+
+    - name: Set UFW default outgoing policy
+      community.general.ufw:
+        policy: allow
+        direction: outgoing
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+
+    - name: Deploy Fail2ban SSH jail
+      ansible.builtin.template:
+        src: sshd.local.j2
+        dest: /etc/fail2ban/jail.d/sshd.local
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart fail2ban
+
+    - name: Validate Fail2ban configuration
+      ansible.builtin.command: /usr/bin/fail2ban-client -t
+      changed_when: false    
+
+    - name: Ensure Fail2ban is enabled and running
+      ansible.builtin.systemd_service:
+        name: fail2ban
+        state: started
+        enabled: true
+
+    
+
+   

@@ -1,0 +1,17 @@
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/terraform.tfvars
+terraform/*.auto.tfvars
+terraform/crash.log
+terraform/crash.*.log
+
+# SSH private keys
+*.pem
+arcgis-jumpbox
+arcgis-internal
+
+# Ansible
+ansible/*.retry
+ansible/.ansible/

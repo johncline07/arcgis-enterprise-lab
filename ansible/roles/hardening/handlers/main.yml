@@ -1,0 +1,9 @@
+    - name: reload ssh
+      ansible.builtin.systemd_service:
+        name: ssh
+        state: reloaded
+
+    - name: restart fail2ban
+      ansible.builtin.systemd_service:
+        name: fail2ban
+        state: restarted

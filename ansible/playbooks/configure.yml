@@ -1,0 +1,13 @@
+---
+- name: Harden jumpbox
+  hosts: jumpboxes
+  become: true
+
+  roles: 
+    - hardening
+
+- name: Harden private RHEL servers
+  hosts: rhel_servers
+  become: true
+  roles:
+    - rhel_hardening
