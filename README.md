@@ -1,8 +1,13 @@
 # Multi-Tier ArcGIS Enterprise Deployment on Azure
 
-A self-directed lab project provisioning a federated, multi-tier ArcGIS Enterprise
-environment (Portal, Server, Data Store) on Microsoft Azure, designed around
-least-privilege network segmentation.
+![Azure](https://img.shields.io/badge/Azure-Networking-blue)
+![Terraform](https://img.shields.io/badge/Terraform-IaC-purple)
+![Ansible](https://img.shields.io/badge/Ansible-Config%20Mgmt-red)
+![Status](https://img.shields.io/badge/Status-Complete-green)
+
+A self-directed lab to build the underlying infrastructure for a multi-tier geospatial platform.
+
+This project started as an attempt to build a multi-tier ArcGIS Enterprise environment in Azure. I ended up narrowing the scope to the infrastructure underneath a geospatial platform: segmented networking, private Linux VMs, secure administrative access, Terraform provisioning, and Ansible configuration management. The application layer was intentionally left out of scope; project ends at the infrastructure and operating-system configuration layer.
 
 ## Project Goals
 
@@ -373,8 +378,4 @@ than only after.
   - [x] SSH root login and password authentication disabled
   - [x] SSH restricted to jumpbox source
   - [x] Idempotence confirmed across all three private RHEL VMs
-- [ ] Phase 3: PostGIS installation and database hardening
-- [ ] Phase 4: GeoServer installation and service configuration
-- [ ] Phase 5: Web/reverse proxy tier
-- [ ] Phase 6: Deliberate failure/troubleshooting exercise
-- [ ] Phase 7: NSG hardening and tighter east-west controls
+
