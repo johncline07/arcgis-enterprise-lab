@@ -1,4 +1,4 @@
-# Multi-Tier Geospatial Infrastructure Lab on Azure
+# Azure infrastructure for a Multi-Tier Geospatial Platform
 
 ![Azure](https://img.shields.io/badge/Azure-Networking-blue)
 ![Terraform](https://img.shields.io/badge/Terraform-IaC-purple)
@@ -36,54 +36,47 @@ Portal and direct desktop (ArcGIS Pro) connections.
 
 ## Network Security Design
 
-## Network Security Design
+Each application tier was placed in its own subnet with a dedicated NSG.
 
-The environment uses separate subnets and NSGs for each tier rather than placing
-all systems on a flat network.
+The initial design included ArcGIS-specific rules based on the original
+ArcGIS Enterprise deployment plan. As the project scope shifted toward
+the underlying infrastructure, the focus became:
 
-The jumpbox is the only VM with a public administrative path. The three RHEL VMs
-use private IPs only and are reached through SSH ProxyJump.
-
-The private servers were also hardened at the host level with firewalld, SELinux,
-key-only SSH authentication, and SSH access restricted to the jumpbox.
-
-A NAT Gateway was added to provide outbound access for package updates without
-assigning public IPs to the private VMs.
+- Administrative access through a dedicated jumpbox
+- No public IPs on the three private RHEL VMs
+- SSH access to private hosts through ProxyJump
+- Separate subnets for web, application, database, and management tiers
+- Host-level firewalling with firewalld
+- SELinux enforcing on RHEL hosts
+- NAT Gateway for outbound package and update access
 
 ### nsg-portal
 | Priority | Source | Port | Purpose |
 |---|---|---|---|
-| 100 | Admin IP | 3389/TCP | Remote administration |
-| 110 | Admin IP | 443/TCP | HTTPS access to Portal web UI |
+| 100 | Admin IP | 3389/TCP | Administrative access |
+| 110 | Admin IP | 443/TCP | Reserved for intended Portal HTTPS traffic |
 
 ### nsg-server
 | Priority | Source | Port | Purpose |
 |---|---|---|---|
-| 100 | Admin IP | 3389/TCP | Remote administration |
-| 110 | snet-portal (10.0.1.0/24) | 6443/TCP | Portal–Server federation (HTTPS) |
-| 120 | snet-portal (10.0.1.0/24) | 6080/TCP | Portal–Server federation (HTTP) |
-| 130 | Admin IP | 6443/TCP | Direct ArcGIS Pro connection to Server |
+| 100 | Admin IP | 3389/TCP | Administrative access |
+| 110 | snet-portal (10.0.1.0/24) | 6443/TCP | Reserved for intended Portal–Server federation |
+| 120 | snet-portal (10.0.1.0/24) | 6080/TCP | Reserved for intended Portal–Server communication |
+| 130 | Admin IP | 6443/TCP | Reserved for intended direct server access |
 
 ### nsg-datastore
 | Priority | Source | Port | Purpose |
 |---|---|---|---|
-| 100 | Admin IP | 3389/TCP | Remote administration |
-| 110 | snet-server (10.0.2.0/24) | 2443/TCP | Data Store deployment communication |
-| 120 | snet-server (10.0.2.0/24) | 9876/TCP | Relational store ↔ hosting server |
-| 130 | snet-server (10.0.2.0/24) | 9840/TCP | In-memory cache database |
-| 140–150 | snet-server (10.0.2.0/24) | 9820, 9850/TCP | Data Store machine-to-machine communication |
-| 160–180 | snet-server (10.0.2.0/24) | 45671–45672, 25672, 44369/TCP | Service webhook communication |
+| 100 | Admin IP | 3389/TCP | Administrative access |
+| 110 | snet-server (10.0.2.0/24) | 2443/TCP | Reserved for intended data-store communication |
+| 120 | snet-server (10.0.2.0/24) | 9876/TCP | Reserved for intended relational-store traffic |
+| 130 | snet-server (10.0.2.0/24) | 9840/TCP | Reserved for intended cache traffic |
+| 140–150 | snet-server (10.0.2.0/24) | 9820, 9850/TCP | Reserved for intended data-store traffic |
+| 160–180 | snet-server (10.0.2.0/24) | 45671–45672, 25672, 44369/TCP | Reserved for intended service communication |
 
-**Design note:** Azure's default `AllowVnetInBound` rule currently permits
-all traffic between subnets within the VNet regardless of the explicit rules
-above. This was a deliberate, known trade-off for this phase, to validate
-the application stack works end-to-end before layering on stricter
-VNet-internal enforcement. Tightening this — replacing the default
-any-to-any internal rule with the explicit tier-to-tier rules above as the
-sole permitted paths — is planned as a hardening pass once the full stack
-is deployed and functional.
+**Design note:** Azure's default AllowVnetInBound rule still permits traffic between subnets within the VNet. I created the explicit tier-to-tier NSG rules above as part of the original design, but I did not complete the final hardening step of removing broad VNet-internal access. As a result, the environment demonstrates the intended segmentation and rule design, but does not enforce strict east-west isolation between tiers.
 
-## Phase 1.5: Infrastructure as Code (Terraform)
+## Phase 2: Infrastructure as Code (Terraform)
 
 After building Phase 1 manually through the Azure Portal to establish a
 working understanding of the architecture, the same networking
@@ -137,8 +130,7 @@ and Terraform **configuration** (`.tf` files, written manually to
 describe desired state) — two separate concerns that `terraform plan`
 reconciles, rather than import automatically generating code.
 
-
-## Phase 2: Jumpbox Provisioning and Hardening
+## Phase 3: Jumpbox Provisioning and Hardening
 
 A dedicated Ubuntu 22.04 LTS jumpbox was provisioned in Terraform to provide
 the only public administrative entry point into the environment. The ArcGIS
@@ -367,18 +359,18 @@ than only after.
 ## Status
 
 - [x] Phase 1: VNet, subnet, and NSG design
-- [x] Phase 1.5: Infrastructure codified and verified in Terraform
-- [x] Phase 2: Jumpbox provisioning and Linux hardening
+- [x] Phase 2: Infrastructure codified and verified in Terraform
+- [x] Phase 3: Jumpbox provisioning and Linux hardening
   - [x] Ubuntu jumpbox provisioned in Terraform
   - [x] Jumpbox manually hardened and validated
   - [x] Reusable cloud-init template created
   - [x] Jumpbox brought under Ansible management
-- [x] Phase 2.5: Private RHEL VM provisioning
+- [x] Phase 4: Private RHEL VM provisioning
   - [x] Private RHEL VMs provisioned for web, GeoServer, and PostGIS tiers
   - [x] Private NICs assigned static IPs
   - [x] SSH access confirmed through jumpbox using ProxyJump
   - [x] NAT Gateway added for outbound RHUI/package access
-- [x] Phase 2.6: RHEL baseline hardening with Ansible
+- [x] Phase 5: RHEL baseline hardening with Ansible
   - [x] Baseline RHEL hardening role created
   - [x] firewalld enabled
   - [x] SELinux enforcing
