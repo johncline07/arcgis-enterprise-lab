@@ -76,7 +76,7 @@ the underlying infrastructure, the focus became:
 
 **Design note:** Azure's default AllowVnetInBound rule still permits traffic between subnets within the VNet. I created the explicit tier-to-tier NSG rules above as part of the original design, but I did not complete the final hardening step of removing broad VNet-internal access. As a result, the environment demonstrates the intended segmentation and rule design, but does not enforce strict east-west isolation between tiers.
 
-## Phase 2: Infrastructure as Code (Terraform)
+## Infrastructure as Code (Terraform)
 
 After building Phase 1 manually through the Azure Portal to establish a
 working understanding of the architecture, the same networking
@@ -130,7 +130,7 @@ and Terraform **configuration** (`.tf` files, written manually to
 describe desired state) — two separate concerns that `terraform plan`
 reconciles, rather than import automatically generating code.
 
-## Phase 3: Jumpbox Provisioning and Hardening
+## Jumpbox Provisioning and Hardening
 
 A dedicated Ubuntu 22.04 LTS jumpbox was provisioned in Terraform to provide
 the only public administrative entry point into the environment. The ArcGIS
@@ -275,7 +275,7 @@ Ansible will run from the administrator workstation. It will connect directly
 to the jumpbox and use the jumpbox as the SSH proxy for the private RHEL hosts.
 The separate private keys will remain on the workstation.
 
-## Phase 2.5: Configuration Management with Ansible
+## Configuration Management with Ansible
 
 The jumpbox's manually-verified hardening state was reproduced as an Ansible
 role, `roles/hardening/`, structured as:
@@ -356,25 +356,22 @@ validating the rendered template's content before it is deployed, rather
 than only after.
 
 
-## Status
+## Completed Scope
 
-- [x] Phase 1: VNet, subnet, and NSG design
-- [x] Phase 2: Infrastructure codified and verified in Terraform
-- [x] Phase 3: Jumpbox provisioning and Linux hardening
-  - [x] Ubuntu jumpbox provisioned in Terraform
-  - [x] Jumpbox manually hardened and validated
-  - [x] Reusable cloud-init template created
-  - [x] Jumpbox brought under Ansible management
-- [x] Phase 4: Private RHEL VM provisioning
-  - [x] Private RHEL VMs provisioned for web, GeoServer, and PostGIS tiers
-  - [x] Private NICs assigned static IPs
-  - [x] SSH access confirmed through jumpbox using ProxyJump
-  - [x] NAT Gateway added for outbound RHUI/package access
-- [x] Phase 5: RHEL baseline hardening with Ansible
-  - [x] Baseline RHEL hardening role created
-  - [x] firewalld enabled
-  - [x] SELinux enforcing
-  - [x] SSH root login and password authentication disabled
-  - [x] SSH restricted to jumpbox source
-  - [x] Idempotence confirmed across all three private RHEL VMs
+- [x] Designed a segmented Azure VNet with separate application, data, and management subnets
+- [x] Created tier-specific NSGs based on the original ArcGIS Enterprise design
+- [x] Imported the existing Azure networking environment into Terraform
+- [x] Provisioned an Ubuntu jumpbox as the only public administrative entry point
+- [x] Provisioned three private RHEL VMs for the web, application, and database tiers
+- [x] Configured SSH `ProxyJump` access with separate key pairs
+- [x] Added NAT Gateway egress so private hosts could reach package repositories without public IPs
+- [x] Hardened the jumpbox with UFW, Fail2ban, and OpenSSH controls
+- [x] Hardened the RHEL hosts with firewalld, SELinux, key-only SSH, and jumpbox-only administrative access
+- [x] Brought Linux configuration under Ansible management
+- [x] Verified Ansible idempotence across the managed hosts
+- [x] Tested out-of-band Azure recovery after an SSH configuration failure
+
+### Intentionally left out of scope
+
+The ArcGIS Enterprise / GeoServer / PostGIS application layer was not deployed. The project stops at the Azure infrastructure, Linux host configuration, and administrative-access layer.
 
