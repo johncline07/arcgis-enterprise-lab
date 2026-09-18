@@ -327,7 +327,9 @@ Instead of rebuilding, I learned that **Azure** gives you an **out-of-band contr
 Once I was able to SSH login again, finally, I still wasn't finished. I corrected the Ansible source so the next run wouldn't put the bad config right back, I corrected the Ansible source/template so another run would not cause the same problem. 
 
 **First Takeaway:** automation amplifies mistakes. The same thing that lets Ansible apply a good config consistently can apply a bad config just as consistently. 
+
 **Second Takeaway:** I learned why out-of-band management matters.
+
 **Third Takeaway:** Validate. Validate. Validate...before replacing a known-good config....sooner rather than later. 
 
 
