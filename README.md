@@ -7,15 +7,17 @@
 
 A self-directed lab to build the underlying infrastructure for a multi-tier geospatial platform.
 
-This project started as an attempt to build a multi-tier ArcGIS Enterprise environment in Azure. I ended up narrowing the scope to the infrastructure underneath a geospatial platform: segmented networking, private Linux VMs, secure administrative access, Terraform provisioning, and Ansible configuration management. The application layer was intentionally left out of scope; project ends at the infrastructure and operating-system configuration layer.
+For this project, I wanted to build something that mimics a real environment like the environment that I log into every day as a DoD contractor. I've spent years supporting and learning how to support ArcGIS Enterprise environments. Understand how the system works together from the user point-of-view and a slightly deeper understanding of servers/cloud from my Master's of GIS (PSU) degree where I targetted much of my extra-curricular courses toward Cloud geospatial platforms. I understand the Esri poprietary application suite as well as other open-source applications. What I lack is hands-on experience building the infrastructure those applications migth run on in a real enterprise environment. Here, I set out to close that gap.
+
+I started with the plan to build out a system from bottom-up including the application layer but with several limitations (namely, Esri doesn't have a free tier developer license for this type of deployment), I then pivoted to open-source applications (QGIS, PostGIS/PostGresSQL, leaflet). Finally, I pivoted a third time to only deploying the underlying Azure infrastructure once I realzed just how much work goes into deploying Azure resources, hardening Linux servers, and learning Ansible and Terraform all at once. 
 
 ## Project Goals
 
-- Build a realistic multi-tier Azure environment instead of another isolated cloud exercise
+- Build a realistic multi-tier Azure environment
 - Get hands-on with Terraform for provisioning and managing Azure infrastructure
 - Use Ansible to configure and harden Linux VMs after deployment
 - Practice network segmentation, private addressing, NSGs, SSH jump-host access, and outbound NAT
-- Build infrastructure similar to what could sit underneath a geospatial platform
+- Build infrastructure similar to what could sit underneath a modern geospatial platform
 
 ## Architecture Overview
 
