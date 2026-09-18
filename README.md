@@ -7,7 +7,7 @@
 
 A self-directed lab to build the underlying infrastructure for a multi-tier geospatial platform.
 
-For this project, I wanted to build something that mimics a real environment like the environment that I log into every day as a DoD contractor. I've spent years supporting and learning how to support ArcGIS Enterprise environments. Understand how the system works together from the user point-of-view and a slightly deeper understanding of servers/cloud from my Master's of GIS (PSU) degree where I targetted much of my extra-curricular courses toward Cloud geospatial platforms. I understand the Esri poprietary application suite as well as other open-source applications. What I lack is hands-on experience building the infrastructure those applications migth run on in a real enterprise environment. Here, I set out to close that gap.
+For this project, I wanted to build something that mimics a real environment like the environment that I log into every day as a DoD contractor. I've spent years supporting and learning how to support ArcGIS Enterprise environments. Understand how the system works together from the user point-of-view and a slightly deeper understanding of servers/cloud from my Master's of GIS (PSU) degree where I targetted much of my extra-curricular courses toward Cloud geospatial platforms. I understand the Esri poprietary application suite as well as other open-source applications. What I lack is hands-on experience building the infrastructure those applications might run on in a real enterprise environment. Here, I set out to close that gap.
 
 I started with the plan to build out a system from bottom-up including the application layer but with several limitations (namely, Esri doesn't have a free tier developer license for this type of deployment), I then pivoted to open-source applications (QGIS, PostGIS/PostGresSQL, leaflet). Finally, I pivoted a third time to only deploying the underlying Azure infrastructure once I realzed just how much work goes into deploying Azure resources, hardening Linux servers, and learning Ansible and Terraform all at once. 
 
@@ -78,13 +78,13 @@ the underlying infrastructure, the focus became:
 
 **Design note:** Azure's default AllowVnetInBound rule still permits traffic between subnets within the VNet. I created the explicit tier-to-tier NSG rules above as part of the original design, but I did not complete the final hardening step of removing broad VNet-internal access. As a result, the environment demonstrates the intended segmentation and rule design, but does not enforce strict east-west isolation between tiers.
 
-## Infrastructure as Code (Terraform)
+## Terraform (IaC)
 
 After building Phase 1 manually through the Azure Portal to establish a
 working understanding of the architecture, the same networking
 infrastructure was brought under Terraform management using `terraform
-import` rather than a clean rebuild. 
-I did it this way because that's how it actually works in the real world 
+import` rather than a clean rebuild. While I've clicked around a cloud portal to deploy resources, it's increasingly the reality that few engineers actually do this. So, this is my first attempt at learning Terraform and all it's wonders.
+Also, I did it this way because that's how it actually works in the real world 
 where you inherit existing infrastructure and there's no such thing as a clean start. 
 
 **Project structure:**
@@ -106,13 +106,16 @@ terraform/
 - All three subnet-to-NSG associations
 
 **Notable issues encountered and resolved:**
-- **Forced replacement on subnets**: the AzureRM provider defaults
-  `default_outbound_access_enabled` to `true` when the attribute is
-  omitted from configuration, while the existing subnets had it set to
-  `false`. Since this attribute cannot be changed in place, Terraform
-  initially planned to destroy and recreate all three subnets on import.
-  Resolved by explicitly setting the attribute to match the real deployed
-  state before importing.
+- **Terraform wanted to destroy my infrastructure!:** I had already built the network in Azure Portal, clicking many times over. The first time I brought previously existing infrastructure under Terraform management brought some basic Terraform function into my attention. `terraform plan` told me that I wanted to destroy and rebuild all three existing subnets. If this were an existing enterprise, I imagine this **would be a very large network outage** so it was very reasonably an "absolutely not" moment. I was, and still am, new enough to Terraform that seeing `destroy` drew caution so I slowed and read through the output. Azure had `default_outbound_access_enabled` as `false`, accidently omitted it from my Terraform config caused the AzureRM provider to assume `true`. Because Azure couldn't change that property in place, Terraform correctly concluded replacement was required. My first time using Terraform was also my first time experiencing the fact that a configuration as written needs to fully describe existing infrastructure in place, or else Terraform will do what it's designed to do. I learned that `terraform plan` is a warning/explanation tool and is not meant to simply be a step on the way to `apply`. Slow down, observe behavior. 
+
+- **this stupid IP diff would not go away:** this one is less scary and more one of those nuances that comes with mixing platforms. Terraform showed a difference for an NSG source IP even though the address was the same. Azure stored a single host as a bare IP, while Terraform wanted CIDR notation. I eventually let Terraform normalize it with an `apply` and the persistent diff disappeared. The lesson here is that desired-state tools care about exact representation, not just functional equivalence. 
+
+- **typos, typos, typos:** — dumb errors that burned more time than they should have. Early `init` and `plan` failures came from things like `azurem` instead of `azurerm` and `virtual_nework` instead of `virtual_network`. These were more annoying than stressful but they revealed to me that even though these automation tools are smart, efficient, and effective, human error can throw a wrench in them at anytime. If you continue to read, you'll learn how typos are a persistent bane-of-my-existance throughout this project.
+
+- **the larger Terraform realization:** — import did less magic than you initially expected. At the time of using `import` I thought that if I had existing infrastructure in Azure, then importing it would magically write the HCL that represents the resources. How woefully and tragically naive I was. I didn't have a perfect "ahah" moment, it took a few hours of researching `import` and thinking relatively deeply **(congrats, to those of you who it was made clear immediatly)** about it to sort of start getting it. More reps with actually writing Terraform modules and deplying infra with it, it came to me that `import` tells Terraform that resources exists, but you still have to **describe it in HCL**. 
+
+
+
 - **IP address formatting mismatch**: Azure's Portal stores a
   single-host NSG rule source as a bare IP address (e.g.
   `admin_ip`), while Terraform's AzureRM provider represents it in
