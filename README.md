@@ -81,9 +81,9 @@ the underlying infrastructure, the focus became:
 After building Phase 1 manually through the Azure Portal to establish a
 working understanding of the architecture, the same networking
 infrastructure was brought under Terraform management using `terraform
-import` rather than a clean rebuild — a deliberately more realistic
-exercise, since real-world environments are far more often *inherited*
-into IaC than built from a blank slate.
+import` rather than a clean rebuild. 
+I did it this way because that's how it actually works in the real world 
+where you inherit existing infrastructure and there's no such thing as a clean start. 
 
 **Project structure:**
 ```
@@ -318,42 +318,17 @@ depends on the template task actually changing something).
 
 ### Incident: SSH service failure during hardening rollout
 
-While iterating on the SSH hardening template, a typo shipped in the rendered
-config (`PasswordAuthetication` / `KbdInteractiveAuthetication`, both missing
-an "n"). `sshd`'s post-reload validation caught the malformed options, and the
-service entered a crash-loop (`Start request repeated too quickly`), taking
-SSH access to the jumpbox down entirely — the only administrative path into
-the environment.
+**A true "did I just break this entire thing?" moment**
 
-**Diagnosis and recovery used Azure's out-of-band `az vm run-command`
-channel**, which executes scripts on the VM through the Azure control plane
-rather than over SSH, and was the only available access path once sshd was
-down:
+I was converting SSH hardening that I manually configured into Ansible so the configuration would be repeatable. Somewhere in the process I misspelled `PasswordAuthentication` and `KbdInteractiveAuthentication` (It's entirely possible I misspelled it again, here, who knows) in the SSH configuration. Ansible put that bad config onto the jumpbox. `sshd` could no longer start correctly and eventually hi the `systemd Start request repeated too quickly` state. Then, I hit the real consequence: **I couldn't SSH into the jumpbox machine**, this was the primary access to the other three machines. Because the RHEL servers didn't have public IPs, intentionally so the jumpbox was the only access point, losing the jumpbox cut off normal administration to the entire private side of the lab. At this point ** I had to consider if I needed to tear down the entire lab and restart ** to fix the broken path - after having spent so much time building and hardening this thing, one typo had potentially locked me out of my own infrastructure. 
 
-1. `systemctl status sshd` and `ufw status verbose` confirmed sshd was
-   failed/crash-looping rather than a network/NSG problem
-2. `sshd -t` run directly via `run-command` surfaced the exact bad
-   configuration options and line numbers
-3. The typo was corrected on the live host with a targeted `sed` replacement,
-   validated again with `sshd -t`, and the service was restarted
-4. A secondary issue — a missing `/run/sshd` privilege-separation directory,
-   normally created at boot — was found and fixed the same way before sshd
-   would start cleanly
-5. Normal SSH access was confirmed restored before re-running the corrected
-   Ansible role
+Instead of rebuilding, I learned that **Azure** gives you an **out-of-band control-plane** with  `az vm run-command`. This doesn't depend on SSH working. It was effectively MY "in case this, break glass" type of tool in this situation. I used it to inspect `systemctl status sshd`, check the firewall, and establish that this wasn't an NSG/routing problem, the SSH service itself was broken. I ran `sshd -t` through that channel and finally exposed the malformed configuration options. I corrected the live file with `sed`, validated it again, and tried bringing SSH back. I hit a **second** wall: `/run/sshd` was missing. Even after fixing the original typo, the daemon still wouldn't come up cleanly. I was able to fix this with the same out-of-band channel and restarted the service.
 
-The template file was corrected locally (and converted from CRLF to LF line
-endings, which had made the typo harder to visually verify) so the fix is
-version-controlled rather than only existing as a manual live patch. A stray
-UFW rule from an earlier, differently-typo'd admin IP was also found and
-removed during recovery.
+Once I was able to SSH login again, finally, I still wasn't finished. I corrected the Ansible source so the next run wouldn't put the bad config right back, I corrected the Ansible source/template so another run would not cause the same problem. 
 
-**Takeaway:** the role's existing `sshd -t` validation step is correct in
-principle, but it validates the file *after* it has already been written to
-disk and *right before* a reload — it does not prevent a bad config from
-reaching the host in the first place. A useful future refinement would be
-validating the rendered template's content before it is deployed, rather
-than only after.
+**First Takeaway:** automation amplifies mistakes. The same thing that lets Ansible apply a good config consistently can apply a bad config just as consistently. 
+**Second Takeaway:** I learned why out-of-band management matters.
+**Third Takeaway:** Validate. Validate. Validate...before replacing a known-good config....sooner rather than later. 
 
 
 ## Completed Scope
