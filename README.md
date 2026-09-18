@@ -1,4 +1,4 @@
-# Multi-Tier ArcGIS Enterprise Deployment on Azure
+# Multi-Tier Geospatial Infrastructure Lab on Azure
 
 ![Azure](https://img.shields.io/badge/Azure-Networking-blue)
 ![Terraform](https://img.shields.io/badge/Terraform-IaC-purple)
@@ -11,22 +11,22 @@ This project started as an attempt to build a multi-tier ArcGIS Enterprise envir
 
 ## Project Goals
 
-- Demonstrate hands-on provisioning and configuration of ArcGIS Enterprise
-  infrastructure, beyond day-to-day GIS data support work
-- Apply cloud networking and security fundamentals (VNets, subnets, NSGs) to
-  a real multi-tier application architecture
-- Build a foundation for ongoing Azure certification study (AZ-104) using a
-  concrete, non-trivial project rather than isolated exercises
+- Build a realistic multi-tier Azure environment instead of another isolated cloud exercise
+- Get hands-on with Terraform for provisioning and managing Azure infrastructure
+- Use Ansible to configure and harden Linux VMs after deployment
+- Practice network segmentation, private addressing, NSGs, SSH jump-host access, and outbound NAT
+- Build infrastructure similar to what could sit underneath a geospatial platform
 
 ## Architecture Overview
 
 The environment is split into three tiers, each isolated in its own subnet:
 
-| Tier | Subnet | CIDR | Role |
-|------|--------|------|------|
-| Portal | `snet-portal` | 10.0.1.0/24 | User-facing web UI, authentication, content management |
-| Server | `snet-server` | 10.0.2.0/24 | Hosts and serves map/feature services; federates with Portal |
-| Data Store | `snet-datastore` | 10.0.3.0/24 | Backing relational store for hosted content |
+| Tier | Subnet | CIDR | Intended Role |
+|------|--------|------|---------------|
+| Web | `snet-portal` | 10.0.1.0/24 | Front-end / reverse proxy tier |
+| Application | `snet-server` | 10.0.2.0/24 | Geospatial application services |
+| Database | `snet-datastore` | 10.0.3.0/24 | PostgreSQL/PostGIS-style data tier |
+| Management | `snet-jumpbox` | 10.0.4.0/24 | Administrative jumpbox |
 
 All three subnets sit inside a single VNet (`vnet-arcgis-lab`, 10.0.0.0/16),
 segmented by function rather than left flat. This mirrors the general shape
@@ -36,12 +36,19 @@ Portal and direct desktop (ArcGIS Pro) connections.
 
 ## Network Security Design
 
-Each subnet has a dedicated Network Security Group (NSG) scoped to the
-minimum inbound access required for that tier, based on Esri's documented
-ArcGIS Enterprise port requirements (https://enterprise.arcgis.com).
-Rather than opening broad ranges or relying on trial and error, each rule
-maps directly to a specific, documented ArcGIS Enterprise communication
-requirement.
+## Network Security Design
+
+The environment uses separate subnets and NSGs for each tier rather than placing
+all systems on a flat network.
+
+The jumpbox is the only VM with a public administrative path. The three RHEL VMs
+use private IPs only and are reached through SSH ProxyJump.
+
+The private servers were also hardened at the host level with firewalld, SELinux,
+key-only SSH authentication, and SSH access restricted to the jumpbox.
+
+A NAT Gateway was added to provide outbound access for package updates without
+assigning public IPs to the private VMs.
 
 ### nsg-portal
 | Priority | Source | Port | Purpose |
