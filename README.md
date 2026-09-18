@@ -114,27 +114,6 @@ terraform/
 
 - **the larger Terraform realization:** — import did less magic than you initially expected. At the time of using `import` I thought that if I had existing infrastructure in Azure, then importing it would magically write the HCL that represents the resources. How woefully and tragically naive I was. I didn't have a perfect "ahah" moment, it took a few hours of researching `import` and thinking relatively deeply **(congrats, to those of you who it was made clear immediatly)** about it to sort of start getting it. More reps with actually writing Terraform modules and deplying infra with it, it came to me that `import` tells Terraform that resources exists, but you still have to **describe it in HCL**. 
 
-
-
-- **IP address formatting mismatch**: Azure's Portal stores a
-  single-host NSG rule source as a bare IP address (e.g.
-  `admin_ip`), while Terraform's AzureRM provider represents it in
-  explicit CIDR notation (`admin_ip`). Both are functionally
-  identical, but required one `terraform apply` per NSG to normalize the
-  stored format and eliminate a persistent, harmless diff.
-- **Provider naming typos**: several early `terraform init`/`plan`
-  errors traced back to typos in resource type names and the
-  `required_providers` local key (e.g. `azurem` instead of `azurerm`,
-  `azurerm_virtual_nework` instead of `azurerm_virtual_network`) —
-  resolved by reading Terraform's error output carefully rather than
-  assuming the config was correct.
-
-This phase reinforced the distinction between Terraform **state**
-(populated by `terraform import`, reflecting real-world resource data)
-and Terraform **configuration** (`.tf` files, written manually to
-describe desired state) — two separate concerns that `terraform plan`
-reconciles, rather than import automatically generating code.
-
 ## Jumpbox Provisioning and Hardening
 
 A dedicated Ubuntu 22.04 LTS jumpbox was provisioned in Terraform to provide
